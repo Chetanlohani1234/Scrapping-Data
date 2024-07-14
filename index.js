@@ -71,84 +71,88 @@ async function downloadImage(url, filePath) {
                 file.close(resolve);
             });
         }).on('error', (err) => {
-            fs.unlink(filePath);
-            reject(err.message);
+            fs.unlink(filePath, () => reject(err.message));
         });
     });
 }
 
 async function scrapeProduct(url) {
-    const browser = await puppeteer.launch({ headless: false });
-    const page = await browser.newPage();
-    await page.goto(url, { waitUntil: 'networkidle2' }); // Wait until the page is fully loaded
+    let browser;
+    try {
+        browser = await puppeteer.launch({ headless: true });
+        const page = await browser.newPage();
+        await page.goto(url, { waitUntil: 'networkidle2' });
 
-    // Selectors
-    const imgSelector = "#product-377147 img"; // Simplified selector
-    const textSelector = '#product-377147 .title-wrapper > h1';
-    const priceSelector = '#product-377147 .summary.entry-summary > p > span > bdi';
-    const detailsSelector = '#section-item-details .product-details-newblock';
-    const priceBreakupSelector = '#section-price-breakup table';
+        // Selectors
+        const imgSelector = "#product-377147 img"; // Simplified selector
+        const textSelector = '#product-377147 .title-wrapper > h1';
+        const priceSelector = '#product-377147 .summary.entry-summary > p > span > bdi';
+        const detailsSelector = '#section-item-details .product-details-newblock';
+        const priceBreakupSelector = '#section-price-breakup table';
 
-    // Extract elements
-    const textElement = await page.$(textSelector);
-    const priceElement = await page.$(priceSelector);
-    const detailsElement = await page.$(detailsSelector);
-    const priceBreakupElement = await page.$(priceBreakupSelector);
-    const imgElement = await page.$(imgSelector);
+        // Extract elements
+        const textElement = await page.$(textSelector);
+        const priceElement = await page.$(priceSelector);
+        const detailsElement = await page.$(detailsSelector);
+        const priceBreakupElement = await page.$(priceBreakupSelector);
+        const imgElement = await page.$(imgSelector);
 
-    // Debug logging for elements
-    //console.log({ textElement, priceElement, detailsElement, priceBreakupElement, imgElement });
-
-    // Extract properties
-    const text = textElement ? await (await textElement.getProperty('innerText')).jsonValue() : null;
-    const price = priceElement ? await (await priceElement.getProperty('innerText')).jsonValue() : null;
-    const details = detailsElement ? await (await detailsElement.getProperty('innerText')).jsonValue() : null;
-    const priceBreakupDetails = priceBreakupElement ? await (await priceBreakupElement.getProperty('innerText')).jsonValue() : null;
-    const imageUrl = imgElement ? await (await imgElement.getProperty('src')).jsonValue() : null;
-
-    // Remove newline characters
-    const cleanText = text ? text.replace(/\n/g, ' ') : null;
-    const cleanPrice = price ? price.replace(/\n/g, ' ') : null;
-    const cleanDetails = details ? details.replace(/\n/g, ' ') : null;
-    const cleanPriceBreakup = priceBreakupDetails ? priceBreakupDetails.replace(/\n/g, ' ') : null;
-
-    //console.log({ srcTxt: cleanText, priceTxt: cleanPrice, productDetails: cleanDetails, priceBreakupTxt: cleanPriceBreakup, imageUrl });
-
-    let localImagePath = null;
-
-    // Download the image and save it to a local path
-    if (imageUrl) {
-        const imageName = path.basename(imageUrl); // Extracts the image name from the URL
-        const imagePath = path.join(__dirname, 'images', imageName); // Save it to the 'images' folder
-        try {
-            // Create the directory if it doesn't exist
-            fs.mkdirSync(path.dirname(imagePath), { recursive: true });
-            
-            await downloadImage(imageUrl, imagePath);
-            console.log(`Image downloaded and saved to ${imagePath}`);
-            localImagePath = imagePath; // Set the local image path
-        } catch (error) {
-            console.error(`Failed to download image: ${error}`);
+        if (!textElement || !priceElement || !detailsElement || !priceBreakupElement || !imgElement) {
+            throw new Error('One or more selectors did not match any elements on the page.');
         }
+
+        // Extract properties
+        const text = textElement ? await (await textElement.getProperty('innerText')).jsonValue() : null;
+        const price = priceElement ? await (await priceElement.getProperty('innerText')).jsonValue() : null;
+        const details = detailsElement ? await (await detailsElement.getProperty('innerText')).jsonValue() : null;
+        const priceBreakupDetails = priceBreakupElement ? await (await priceBreakupElement.getProperty('innerText')).jsonValue() : null;
+        const imageUrl = imgElement ? await (await imgElement.getProperty('src')).jsonValue() : null;
+
+        // Remove newline characters
+        const cleanText = text ? text.replace(/\n/g, ' ') : null;
+        const cleanPrice = price ? price.replace(/\n/g, ' ') : null;
+        const cleanDetails = details ? details.replace(/\n/g, ' ') : null;
+        const cleanPriceBreakup = priceBreakupDetails ? priceBreakupDetails.replace(/\n/g, ' ') : null;
+
+        let localImagePath = null;
+
+        // Download the image and save it to a local path
+        if (imageUrl) {
+            const imageName = path.basename(imageUrl); // Extracts the image name from the URL
+            const imagePath = path.join(__dirname, 'images', imageName); // Save it to the 'images' folder
+            try {
+                // Create the directory if it doesn't exist
+                fs.mkdirSync(path.dirname(imagePath), { recursive: true });
+
+                await downloadImage(imageUrl, imagePath);
+                console.log(`Image downloaded and saved to ${imagePath}`);
+                localImagePath = imagePath; // Set the local image path
+            } catch (error) {
+                console.error(`Failed to download image: ${error}`);
+                throw new Error('Image download failed');
+            }
+        }
+
+        await browser.close();
+
+        return {
+            srcTxt: cleanText,
+            priceTxt: cleanPrice,
+            productDetails: cleanDetails,
+            priceBreakupTxt: cleanPriceBreakup,
+            image: localImagePath
+        };
+    } catch (error) {
+        if (browser) {
+            await browser.close();
+        }
+        console.error(`Error in scrapeProduct: ${error.message}`);
+        throw error;
     }
-
-    console.log({ srcTxt: cleanText, priceTxt: cleanPrice, productDetails: cleanDetails, priceBreakupTxt: cleanPriceBreakup, image: localImagePath });
-
-    await browser.close();
-
-    return {
-        srcTxt: cleanText,
-        priceTxt: cleanPrice,
-        productDetails: cleanDetails,
-        priceBreakupTxt: cleanPriceBreakup,
-        image: localImagePath
-    };
 }
 
-//scrapeProduct("https://jewelbox.co.in/hearts-all-the-way-diamond-bracelet/#divDiamond");
-
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 app.get('/scrape', async (req, res) => {
     const url = req.query.url;
@@ -160,7 +164,7 @@ app.get('/scrape', async (req, res) => {
         const data = await scrapeProduct(url);
         res.json(data);
     } catch (error) {
-        console.error(error);
+        console.error(`Error in /scrape endpoint: ${error.message}`);
         res.status(500).json({ error: 'An error occurred while scraping the product' });
     }
 });
@@ -168,7 +172,6 @@ app.get('/scrape', async (req, res) => {
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
 });
-
 
 // const puppeteer = require('puppeteer');
 
@@ -211,4 +214,3 @@ app.listen(port, () => {
 // }
 
 // scrapeProduct("https://www.giva.co/collections/all-sets?msclkid=a1883726008e13f721d851b6e7d0ba25&utm_source=bing&utm_medium=cpc&utm_campaign=Generic&utm_term=bluestone%20jewellery&utm_content=Jewellery");
-
