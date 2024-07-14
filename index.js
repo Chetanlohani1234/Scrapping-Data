@@ -79,7 +79,11 @@ async function downloadImage(url, filePath) {
 async function scrapeProduct(url) {
     let browser;
     try {
-        browser = await puppeteer.launch({ headless: true });
+        browser = await puppeteer.launch({
+             headless: true, 
+             args: ['--no-sandbox', '--disable-setuid-sandbox'],
+            executablePath: puppeteer.executablePath() 
+            });
         const page = await browser.newPage();
         await page.goto(url, { waitUntil: 'networkidle2' });
 
@@ -168,6 +172,7 @@ app.get('/scrape', async (req, res) => {
         res.status(500).json({ error: 'An error occurred while scraping the product' });
     }
 });
+//gh
 
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
