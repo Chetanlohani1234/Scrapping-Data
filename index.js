@@ -82,7 +82,7 @@ async function scrapeProduct(url) {
         browser = await puppeteer.launch({
             headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox'],
-            executablePath: process.env.CHROMIUM_PATH || puppeteer.executablePath()
+            //executablePath: process.env.CHROMIUM_PATH || puppeteer.executablePath()
         });
         const page = await browser.newPage();
         await page.goto(url, { waitUntil: 'networkidle2' });

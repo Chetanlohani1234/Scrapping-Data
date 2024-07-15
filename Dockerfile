@@ -1,28 +1,5 @@
-# Use the official Node.js image
-FROM node:14
-
-# Install necessary dependencies for Puppeteer
-RUN apt-get update && apt-get install -y \
-    wget \
-    ca-certificates \
-    fonts-liberation \
-    libappindicator3-1 \
-    libasound2 \
-    libatk1.0-0 \
-    libcups2 \
-    libdbus-1-3 \
-    libexpat1 \
-    libgbm1 \
-    libgtk-3-0 \
-    libnspr4 \
-    libnss3 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    xdg-utils \
-    --no-install-recommends \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# Use the official Node.js image with Puppeteer pre-installed
+FROM ghcr.io/puppeteer/puppeteer:latest
 
 # Set the working directory
 WORKDIR /app
