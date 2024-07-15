@@ -56,6 +56,130 @@
 
 // scrapeProduct("https://jewelbox.co.in/hearts-all-the-way-diamond-bracelet/#divDiamond");
 
+// const express = require('express');
+// const puppeteer = require('puppeteer');
+// const fs = require('fs');
+// const https = require('https');
+// const path = require('path');
+
+// async function downloadImage(url, filePath) {
+//     return new Promise((resolve, reject) => {
+//         const file = fs.createWriteStream(filePath);
+//         https.get(url, (response) => {
+//             response.pipe(file);
+//             file.on('finish', () => {
+//                 file.close(resolve);
+//             });
+//         }).on('error', (err) => {
+//             fs.unlink(filePath, () => reject(err.message));
+//         });
+//     });
+// }
+
+// async function scrapeProduct(url) {
+//     let browser;
+//     try {
+//         browser = await puppeteer.launch({
+//             headless: true,
+//             args: ['--no-sandbox', '--disable-setuid-sandbox'],
+//             executablePath: process.env.CHROMIUMclear_PATH || puppeteer.executablePath()
+//         });
+//         const page = await browser.newPage();
+//         await page.goto(url, { waitUntil: 'networkidle2' });
+
+//         // Selectors
+//         const imgSelector = "#product-377147 img"; // Simplified selector
+//         const textSelector = '#product-377147 .title-wrapper > h1';
+//         const priceSelector = '#product-377147 .summary.entry-summary > p > span > bdi';
+//         const detailsSelector = '#section-item-details .product-details-newblock';
+//         const priceBreakupSelector = '#section-price-breakup table';
+
+
+//         // Extract elements
+//         const textElement = await page.$(textSelector);
+//         const priceElement = await page.$(priceSelector);
+//         const detailsElement = await page.$(detailsSelector);
+//         const priceBreakupElement = await page.$(priceBreakupSelector);
+//         const imgElement = await page.$(imgSelector);
+
+//         if (!textElement || !priceElement || !detailsElement || !priceBreakupElement || !imgElement) {
+//             throw new Error('One or more selectors did not match any elements on the page.');
+//         }
+
+//         // Extract properties
+//         const text = textElement ? await (await textElement.getProperty('innerText')).jsonValue() : null;
+//         const price = priceElement ? await (await priceElement.getProperty('innerText')).jsonValue() : null;
+//         const details = detailsElement ? await (await detailsElement.getProperty('innerText')).jsonValue() : null;
+//         const priceBreakupDetails = priceBreakupElement ? await (await priceBreakupElement.getProperty('innerText')).jsonValue() : null;
+//         const imageUrl = imgElement ? await (await imgElement.getProperty('src')).jsonValue() : null;
+
+//         // Remove newline characters
+//         const cleanText = text ? text.replace(/\n/g, ' ') : null;
+//         const cleanPrice = price ? price.replace(/\n/g, ' ') : null;
+//         const cleanDetails = details ? details.replace(/\n/g, ' ') : null;
+//         const cleanPriceBreakup = priceBreakupDetails ? priceBreakupDetails.replace(/\n/g, ' ') : null;
+
+//         let localImagePath = null;
+
+//         // Download the image and save it to a local path
+//         if (imageUrl) {
+//             const imageName = path.basename(imageUrl); // Extracts the image name from the URL
+//             const imagePath = path.join(__dirname, 'images', imageName); // Save it to the 'images' folder
+//             try {
+//                 // Create the directory if it doesn't exist
+//                 fs.mkdirSync(path.dirname(imagePath), { recursive: true });
+
+//                 await downloadImage(imageUrl, imagePath);
+//                 console.log(`Image downloaded and saved to ${imagePath}`);
+//                 localImagePath = imagePath; // Set the local image path
+//             } catch (error) {
+//                 console.error(`Failed to download image: ${error}`);
+//                 throw new Error('Image download failed');
+//             }
+//         }
+
+//         await browser.close();
+
+//         return {
+//             srcTxt: cleanText,
+//             priceTxt: cleanPrice,
+//             productDetails: cleanDetails,
+//             priceBreakupTxt: cleanPriceBreakup,
+//             image: localImagePath
+//         };
+//     } catch (error) {
+//         if (browser) {
+//             await browser.close();
+//         }
+//         console.error(`Error in scrapeProduct: ${error.message}`);
+//         throw error;
+//     }
+// }
+
+// const app = express();
+// const port = process.env.PORT || 3000;
+
+// app.get('/scrape', async (req, res) => {
+//     const url = req.query.url;
+//     if (!url) {
+//         return res.status(400).json({ error: 'URL parameter is required' });
+//     }
+
+//     try {
+//         const data = await scrapeProduct(url);
+//         res.json(data);
+//     } catch (error) {
+//         console.error(`Error in /scrape endpoint: ${error.message}`);
+//         res.status(500).json({ error: 'An error occurred while scraping the product' });
+//     }
+// });
+
+// app.listen(port, () => {
+//     console.log(`Server is running on http://localhost:${port}`);
+// });
+/** Single working code  */
+
+
 const express = require('express');
 const puppeteer = require('puppeteer');
 const fs = require('fs');
@@ -82,17 +206,24 @@ async function scrapeProduct(url) {
         browser = await puppeteer.launch({
             headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox'],
-            executablePath: process.env.CHROMIUMclear_PATH || puppeteer.executablePath()
+            executablePath: process.env.CHROMIUM_PATH || puppeteer.executablePath()
         });
         const page = await browser.newPage();
         await page.goto(url, { waitUntil: 'networkidle2' });
 
-        // Selectors
-        const imgSelector = "#product-377147 img"; // Simplified selector
-        const textSelector = '#product-377147 .title-wrapper > h1';
-        const priceSelector = '#product-377147 .summary.entry-summary > p > span > bdi';
-        const detailsSelector = '#section-item-details .product-details-newblock';
-        const priceBreakupSelector = '#section-price-breakup table';
+        // Selectors to extract information from the page
+      const imgSelector = "img"; // Example selector for product image (might need adjustment)
+      const textSelector = '.title-wrapper > h1'; // Example selector for product title (might need adjustment)
+      const priceSelector = '.summary.entry-summary > p > span > bdi'; // Example selector for product price (might need adjustment)
+      const detailsSelector = '.product-details-newblock'; // Example selector for product details (might need adjustment)
+      const priceBreakupSelector = '#section-price-breakup table'; // Example selector for price breakup details (might need adjustment)
+
+        // Wait for necessary elements to appear
+        await page.waitForSelector(imgSelector);
+        await page.waitForSelector(textSelector);
+        await page.waitForSelector(priceSelector);
+        await page.waitForSelector(detailsSelector);
+        await page.waitForSelector(priceBreakupSelector);
 
         // Extract elements
         const textElement = await page.$(textSelector);
@@ -106,17 +237,17 @@ async function scrapeProduct(url) {
         }
 
         // Extract properties
-        const text = textElement ? await (await textElement.getProperty('innerText')).jsonValue() : null;
-        const price = priceElement ? await (await priceElement.getProperty('innerText')).jsonValue() : null;
-        const details = detailsElement ? await (await detailsElement.getProperty('innerText')).jsonValue() : null;
-        const priceBreakupDetails = priceBreakupElement ? await (await priceBreakupElement.getProperty('innerText')).jsonValue() : null;
-        const imageUrl = imgElement ? await (await imgElement.getProperty('src')).jsonValue() : null;
+        const text = await (await textElement.getProperty('innerText')).jsonValue();
+        const price = await (await priceElement.getProperty('innerText')).jsonValue();
+        const details = await (await detailsElement.getProperty('innerText')).jsonValue();
+        const priceBreakupDetails = await (await priceBreakupElement.getProperty('innerText')).jsonValue();
+        const imageUrl = await (await imgElement.getProperty('src')).jsonValue();
 
         // Remove newline characters
-        const cleanText = text ? text.replace(/\n/g, ' ') : null;
-        const cleanPrice = price ? price.replace(/\n/g, ' ') : null;
-        const cleanDetails = details ? details.replace(/\n/g, ' ') : null;
-        const cleanPriceBreakup = priceBreakupDetails ? priceBreakupDetails.replace(/\n/g, ' ') : null;
+        const cleanText = text.replace(/\n/g, ' ');
+        const cleanPrice = price.replace(/\n/g, ' ');
+        const cleanDetails = details.replace(/\n/g, ' ');
+        const cleanPriceBreakup = priceBreakupDetails.replace(/\n/g, ' ');
 
         let localImagePath = null;
 
@@ -160,6 +291,7 @@ const port = process.env.PORT || 3000;
 
 app.get('/scrape', async (req, res) => {
     const url = req.query.url;
+
     if (!url) {
         return res.status(400).json({ error: 'URL parameter is required' });
     }
@@ -169,7 +301,7 @@ app.get('/scrape', async (req, res) => {
         res.json(data);
     } catch (error) {
         console.error(`Error in /scrape endpoint: ${error.message}`);
-        res.status(500).json({ error: 'An error occurred while scraping the product' });
+        res.status(500).json({ error: 'An error occurred while scraping the product page' });
     }
 });
 
